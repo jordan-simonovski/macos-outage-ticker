@@ -1166,12 +1166,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "📰"
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Test Ticker", action: #selector(testTicker), keyEquivalent: "t"))
-        menu.addItem(NSMenuItem(title: "Open Config", action: #selector(openConfig), keyEquivalent: "o"))
-        menu.addItem(NSMenuItem(title: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r"))
+        for (title, action, key) in [
+            ("Test Ticker", #selector(testTicker), "t"),
+            ("Open Config", #selector(openConfig), "o"),
+            ("Reload Config", #selector(reloadConfig), "r"),
+        ] {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+            item.target = self
+            menu.addItem(item)
+        }
         menu.addItem(.separator())
+        // Quit keeps a nil target so the responder chain reaches NSApp; pointing it at
+        // AppDelegate would leave it greyed out, since AppDelegate has no terminate(_:).
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        menu.items.forEach { $0.target = self }
         statusItem.menu = menu
     }
 
