@@ -1,6 +1,6 @@
-import XCTest
-@testable import TickerCore
+import Foundation
+import TickerCore
 
-final class ConfigTests: XCTestCase {
-    func testScaffold() { XCTAssertTrue(true) }
+func runConfigTests() {
+    Check.isTrue(true)
 }
