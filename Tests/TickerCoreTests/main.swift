@@ -3,5 +3,6 @@ runConfigTests()
 runStatusPageTests()
 runOutageMonitorTests()
 runOutageHistoryTests()
+runMessageComposerTests()
 
 Check.report()
