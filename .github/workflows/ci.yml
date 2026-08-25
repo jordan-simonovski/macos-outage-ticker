@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+      - name: Mock server self-test
+        run: python3 scripts/mock-status-server.py --self-test
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal .app
+        run: scripts/make-app.sh "$GITHUB_REF_NAME"
+      - name: Zip
+        # ditto, not zip: preserves bundle structure and the code signature.
+        run: ditto -c -k --keepParent dist/NewsTicker.app dist/NewsTicker.zip
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/NewsTicker.zip \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md
