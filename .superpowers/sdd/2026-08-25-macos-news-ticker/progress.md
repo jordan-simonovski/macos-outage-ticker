@@ -90,3 +90,16 @@ Task 1: BLOCKED on environment, not on code. Held back from task review until `s
 can actually run — the scaffold's only real acceptance criterion is that the test target
 builds and passes. Resume: re-run `swift build && swift test`, then dispatch the Task 1
 reviewer against BASE 9674665 / HEAD 7343ee8.
+
+## Closing note (2026-08-25, resumed session)
+
+All 11 tasks implemented and committed. Toolchain changed mid-run: Xcode 26.6 was
+installed partway through, so Tasks 2-7 were driven red-green against a temporary
+dependency-free assert harness (the fallback this plan documented), and the suite
+was then converted to the originally-specified XCTest `.testTarget`.
+Final state: `swift build` clean, `swift test` 28 tests / 0 failures, ticker
+verified visually at both screen edges against the mock server and confirmed
+hidden against the four real (healthy) status pages.
+
+Three defects were found and fixed beyond the plan's contents; see the plan's
+"Execution status" section for details.
