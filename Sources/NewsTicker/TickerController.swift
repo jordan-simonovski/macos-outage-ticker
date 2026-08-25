@@ -61,7 +61,8 @@ final class TickerController {
     }
 
     // Task 8 verification hook: geometry and visibility without a screenshot.
-    var debugDescription: String {
+    // Named so it cannot resolve to Optional.debugDescription through ticker!.
+    var geometry: String {
         "frame=\(window.frame) visible=\(window.isVisible) level=\(window.level.rawValue) "
         + "clickThrough=\(window.ignoresMouseEvents) textWidth=\(textLayer.frame.width) "
         + "anim=\(textLayer.animation(forKey: "marquee") != nil)"
