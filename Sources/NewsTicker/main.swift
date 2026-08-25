@@ -7,12 +7,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var engine: PollEngine!
     private var config = Config.default
     private var timer: Timer?
+    private var lastText: String?
+
+    private static let stamp: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        return f
+    }()
 
     private let appSupport = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("NewsTicker")
-    private var configURL: URL { appSupport.appendingPathComponent("config.json") }
-    private var historyURL: URL { appSupport.appendingPathComponent("history.json") }
+    // NEWSTICKER_CONFIG points at an alternate config for local testing;
+    // history then lives beside it so mock outages never pollute real history.
+    private var configURL: URL {
+        if let override = ProcessInfo.processInfo.environment["NEWSTICKER_CONFIG"] {
+            return URL(fileURLWithPath: override)
+        }
+        return appSupport.appendingPathComponent("config.json")
+    }
+    private var historyURL: URL {
+        configURL.deletingLastPathComponent().appendingPathComponent("history.json")
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !FileManager.default.fileExists(atPath: configURL.path) {
@@ -49,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func reload() {
         timer?.invalidate()
         ticker?.hide()
+        lastText = nil
         config = Config.load(from: configURL)
         ticker = TickerController(edge: config.edge, pointsPerSecond: config.scrollPointsPerSecond)
         engine = PollEngine(config: config, history: OutageHistory.load(from: historyURL))
@@ -68,6 +85,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let (data, _) = try await URLSession.shared.data(for: request)
                 return data
             }
+            // Only act on change: re-show()ing identical text every poll would
+            // restart the marquee from off-screen mid-outage.
+            guard text != self.lastText else { return }
+            self.lastText = text
+            print("[\(Self.stamp.string(from: Date()))] \(text ?? "(ticker hidden)")")
             if let text { self.ticker.show(text) } else { self.ticker.hide() }
         }
     }
@@ -107,6 +129,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         exit(0)
     }
 }
+
+// Line-buffer stdout: redirected to a file it block-buffers, and the log is
+// lost entirely when the app is killed rather than quit.
+setvbuf(stdout, nil, _IOLBF, 0)
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

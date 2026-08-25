@@ -23,36 +23,44 @@
 
 ## Execution status (2026-08-25)
 
-Execution started on a machine without Xcode and stopped at Task 1. Resume on a machine
-with Xcode installed.
+**All 11 tasks are implemented and committed on `build/news-ticker`.**
 
-**Done:** Task 1 (scaffold) is committed on branch `build/news-ticker`. `swift build` and
-`swift run` both work.
+**The XCTest blocker was resolved by taking this plan's own documented fallback**, not by
+installing Xcode. `Tests/TickerCoreTests` is now an `.executableTarget` running a
+dependency-free assert harness (`Tests/TickerCoreTests/Harness.swift`).
 
-**Blocked:** `swift test` fails with `error: no such module 'XCTest'`. Command Line Tools
-ships the Swift compiler but no test frameworks, and neither `import XCTest` nor
-`import Testing` resolves without Xcode. Every task here is TDD, so this blocks Tasks 2-11.
+    swift build                 # builds
+    swift run TickerCoreTests   # 78 checks, all passing
+    swift run                   # the app
 
-**To resume:**
+To move back to XCTest once Xcode is installed: change the `TickerCoreTests`
+`.executableTarget` in `Package.swift` back to a `.testTarget`, delete
+`Harness.swift` and `Tests/TickerCoreTests/main.swift`, and rewrite each
+`runXTests()` function as an `XCTestCase`. Every API under test is `public`,
+so no `@testable` is needed either way.
 
-1. Install Xcode, then `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`,
-   `sudo xcodebuild -license accept`, `xcodebuild -runFirstLaunch`.
-2. Verify with `swift build && swift test` (Task 1's placeholder test should pass).
-3. Re-run the Task 1 review, then continue from Task 2.
+**Manual verification was done without a screen.** `screencapture` returns
+"could not create image from display" because the terminal lacks Screen Recording
+permission, so Tasks 8 and 9 are verified by `NEWSTICKER_SELFTEST=1 swift run`,
+which prints window geometry, menu item enabled-state and config paths, then exits.
+A human should still eyeball the scrolling bar once.
+
+**Two defects found and fixed during execution, beyond what the plan specified:**
+
+1. `TickerController.debugDescription` (a verification hook added in Task 8) resolved to
+   `Optional.debugDescription` when called through the implicitly-unwrapped `ticker!`,
+   printing `Optional(NewsTicker.TickerController)`. Renamed to `geometry`.
+2. Task 9's `pollOnce` called `ticker.show(text)` on every poll. During an ongoing outage
+   the text is unchanged, so the marquee restarted from off-screen every poll interval —
+   the message would never finish scrolling on a long outage. `pollOnce` now only acts
+   when the text changes, and `reload()` clears that cache.
 
 **Pre-flight fix already applied:** Task 9 originally set `AppDelegate` as the target for
 every menu item including Quit, whose action is `NSApplication.terminate(_:)`. AppDelegate
 does not implement that selector, so AppKit's auto-enabling would have greyed Quit out and
 left the app unquittable from its own menu. Quit now keeps a nil target so the responder
-chain reaches NSApp.
-
-**Fallback if Xcode is not an option:** replace the XCTest test target with a
-dependency-free assert harness in an executable target
-(`.executableTarget(name: "TickerCoreTests", dependencies: ["TickerCore"], path: "Tests/TickerCoreTests")`,
-run with `swift run TickerCoreTests`). This was prototyped and verified working on Command
-Line Tools alone — top-level `await`, `#filePath`/`#line` failure reporting, and non-zero
-exit on failure all functioned. Every API under test is `public`, so the tests need a plain
-`import TickerCore` and no `@testable`.
+chain reaches NSApp. Verified: the self-test forces `menu.update()` and reports
+`Quit enabled=true target=responderChain`.
 
 ## Global Constraints
 
@@ -98,7 +106,7 @@ README.md
 - Consumes: nothing.
 - Produces: a building, testing SPM package with targets `TickerCore` (library), `NewsTicker` (executable, depends on TickerCore), `TickerCoreTests`.
 
-- [ ] **Step 1: Initialize git**
+- [x] **Step 1: Initialize git**
 
 ```bash
 cd /Users/jordanclickhouse/dev/macos-news-ticker
@@ -106,7 +114,7 @@ git init
 printf '.build/\n.DS_Store\n' > .gitignore
 ```
 
-- [ ] **Step 2: Write Package.swift**
+- [x] **Step 2: Write Package.swift**
 
 ```swift
 // swift-tools-version:5.9
@@ -123,7 +131,7 @@ let package = Package(
 )
 ```
 
-- [ ] **Step 3: Write placeholder sources so targets compile**
+- [x] **Step 3: Write placeholder sources so targets compile**
 
 `Sources/TickerCore/Config.swift`:
 ```swift
@@ -147,12 +155,12 @@ final class ConfigTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 4: Verify build and tests**
+- [x] **Step 4: Verify build and tests**
 
 Run: `swift build && swift test`
 Expected: build succeeds, 1 test passes.
 
-- [ ] **Step 5: Sanity-check the status endpoints (no code change)**
+- [x] **Step 5: Sanity-check the status endpoints (no code change)**
 
 Run:
 ```bash
@@ -160,7 +168,7 @@ curl -sS https://www.githubstatus.com/api/v2/status.json | head -c 200
 ```
 Expected: JSON containing `"status":{"indicator":...,"description":...}`. (All four sites were verified on 2026-08-25; this is a canary in case of API drift.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -183,7 +191,7 @@ git commit -m "chore: scaffold SPM package with TickerCore and NewsTicker target
   - `public struct SiteConfig: Codable, Equatable { public var name: String; public var url: String }`
   - `public struct Config: Codable, Equatable` with fields `sites: [SiteConfig]`, `pollIntervalSeconds: Double`, `tone: Tone`, `edge: Edge`, `historyWindowDays: Int`, `repeatOffenderThreshold: Int`, `notNewsThreshold: Int`, `scrollPointsPerSecond: Double`; plus `static let `default``, `static func load(from url: URL) -> Config`, `func save(to url: URL) throws`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Replace `Tests/TickerCoreTests/ConfigTests.swift`:
 ```swift
@@ -224,12 +232,12 @@ final class ConfigTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test`
 Expected: FAIL — `Config` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Replace `Sources/TickerCore/Config.swift`:
 ```swift
@@ -310,12 +318,12 @@ public struct Config: Codable, Equatable {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test`
 Expected: PASS (all Config tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TickerCore/Config.swift Tests/TickerCoreTests/ConfigTests.swift
@@ -337,7 +345,7 @@ git commit -m "feat: JSON config with sites, tone, edge, thresholds"
   - `public struct ServiceStatus: Equatable { public let indicator: Indicator; public let description: String }`
   - `public enum StatusPage { public static func parse(_ data: Data) throws -> ServiceStatus }`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TickerCoreTests/StatusPageTests.swift`:
 ```swift
@@ -369,12 +377,12 @@ final class StatusPageTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test --filter StatusPageTests`
 Expected: FAIL — `StatusPage` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `Sources/TickerCore/StatusPage.swift`:
 ```swift
@@ -416,12 +424,12 @@ public enum StatusPage {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test --filter StatusPageTests`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TickerCore/StatusPage.swift Tests/TickerCoreTests/StatusPageTests.swift
@@ -442,7 +450,7 @@ git commit -m "feat: parse Statuspage v2 status.json"
   - `public final class OutageMonitor` with `public enum Transition: Equatable { case began, ended, none }` and `public func observe(site: String, indicator: Indicator) -> OutageMonitor.Transition`
   - `public static func isOutage(_ indicator: Indicator) -> Bool` (true for minor/major/critical only)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TickerCoreTests/OutageMonitorTests.swift`:
 ```swift
@@ -491,12 +499,12 @@ final class OutageMonitorTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test --filter OutageMonitorTests`
 Expected: FAIL — `OutageMonitor` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `Sources/TickerCore/OutageMonitor.swift`:
 ```swift
@@ -526,12 +534,12 @@ public final class OutageMonitor {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test --filter OutageMonitorTests`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TickerCore/OutageMonitor.swift Tests/TickerCoreTests/OutageMonitorTests.swift
@@ -552,7 +560,7 @@ git commit -m "feat: per-site outage transition detection"
   - `public struct OutageEvent: Codable, Equatable { public let site: String; public let startedAt: Date }`
   - `public final class OutageHistory` with `init(events: [OutageEvent] = [], fileURL: URL? = nil)`, `static func load(from url: URL) -> OutageHistory`, `func record(site: String, at date: Date)` (appends and saves if `fileURL` set), `func count(site: String, withinDays days: Int, asOf now: Date) -> Int`, `private(set) var events: [OutageEvent]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TickerCoreTests/OutageHistoryTests.swift`:
 ```swift
@@ -602,12 +610,12 @@ final class OutageHistoryTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test --filter OutageHistoryTests`
 Expected: FAIL — `OutageHistory` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `Sources/TickerCore/OutageHistory.swift`:
 ```swift
@@ -661,12 +669,12 @@ public final class OutageHistory {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test --filter OutageHistoryTests`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TickerCore/OutageHistory.swift Tests/TickerCoreTests/OutageHistoryTests.swift
@@ -690,7 +698,7 @@ git commit -m "feat: persisted outage history with windowed counts"
     - `public static func resolved(site: String, tone: Tone, pick: (Int) -> Int = { Int.random(in: 0..<$0) }) -> String`
   - `pick(n)` receives the option count and returns an index — inject a constant closure in tests for determinism.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TickerCoreTests/MessageComposerTests.swift`:
 ```swift
@@ -740,12 +748,12 @@ final class MessageComposerTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test --filter MessageComposerTests`
 Expected: FAIL — `Tier` / `MessageComposer` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `Sources/TickerCore/MessageComposer.swift`:
 ```swift
@@ -843,12 +851,12 @@ public enum MessageComposer {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test --filter MessageComposerTests`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Sources/TickerCore/MessageComposer.swift Tests/TickerCoreTests/MessageComposerTests.swift
@@ -869,7 +877,7 @@ git commit -m "feat: tone- and frequency-aware breaking news messages"
   - `public final class PollEngine` with `init(config: Config, history: OutageHistory, pick: @escaping (Int) -> Int = { Int.random(in: 0..<$0) })` and `public func poll(now: Date = Date(), fetch: (URL) async throws -> Data) async -> String?`.
   - Return value: joined ticker text for all active outages (sites sorted alphabetically, joined with `"  •  "`), or `nil` meaning hide the ticker. Fetch/parse failures skip that site and leave its previous state untouched. A resolved message stays for exactly one further poll, then disappears.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `Tests/TickerCoreTests/PollEngineTests.swift`:
 ```swift
@@ -956,12 +964,12 @@ final class PollEngineTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `swift test --filter PollEngineTests`
 Expected: FAIL — `PollEngine` not defined.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `Sources/TickerCore/PollEngine.swift`:
 ```swift
@@ -1013,17 +1021,17 @@ public final class PollEngine {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `swift test --filter PollEngineTests`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `swift test`
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add Sources/TickerCore/PollEngine.swift Tests/TickerCoreTests/PollEngineTests.swift
@@ -1042,7 +1050,7 @@ git commit -m "feat: poll engine turning status polls into ticker text"
 - Consumes: `Edge` from Task 2.
 - Produces: `final class TickerController` with `init(edge: Edge, pointsPerSecond: Double)`, `func show(_ message: String)`, `func hide()`. AppKit only — no unit tests; verified manually.
 
-- [ ] **Step 1: Write the implementation**
+- [x] **Step 1: Write the implementation**
 
 Create `Sources/NewsTicker/TickerController.swift`:
 ```swift
@@ -1115,7 +1123,7 @@ final class TickerController {
 }
 ```
 
-- [ ] **Step 2: Write a temporary demo harness in main.swift**
+- [x] **Step 2: Write a temporary demo harness in main.swift**
 
 Replace `Sources/NewsTicker/main.swift`:
 ```swift
@@ -1139,13 +1147,13 @@ app.setActivationPolicy(.accessory)
 app.run()
 ```
 
-- [ ] **Step 3: Verify manually**
+- [x] **Step 3: Verify manually**
 
 Run: `swift run`
 Expected: a red bar spans the bottom of the screen with the message scrolling right-to-left on repeat, clicks pass through it, no Dock icon appears. Kill with Ctrl-C.
 Also check: change `edge: .bottom` to `.top`, `swift run` again, confirm the bar appears just below the menu bar. Revert to `.bottom` after checking. If the ticker is invisible on top, raise the window level one notch: `NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/NewsTicker/TickerController.swift Sources/NewsTicker/main.swift
@@ -1163,7 +1171,7 @@ git commit -m "feat: scrolling ticker overlay window"
 - Consumes: `Config` (Task 2), `OutageHistory` (Task 5), `PollEngine` (Task 7), `TickerController` (Task 8).
 - Produces: the finished app. Config at `~/Library/Application Support/NewsTicker/config.json`, history at `.../history.json`. Menu: Test Ticker (20 s sample), Open Config, Reload Config, Quit. Env var `NEWSTICKER_DEMO=1` shows a sample ticker on launch for verification.
 
-- [ ] **Step 1: Write the implementation**
+- [x] **Step 1: Write the implementation**
 
 Replace `Sources/NewsTicker/main.swift`:
 ```swift
@@ -1266,12 +1274,12 @@ app.setActivationPolicy(.accessory)
 app.run()
 ```
 
-- [ ] **Step 2: Verify build and full test suite**
+- [x] **Step 2: Verify build and full test suite**
 
 Run: `swift build && swift test`
 Expected: build succeeds, all tests PASS.
 
-- [ ] **Step 3: Verify manually**
+- [x] **Step 3: Verify manually**
 
 Run: `NEWSTICKER_DEMO=1 swift run`
 Expected:
@@ -1281,7 +1289,7 @@ Expected:
 4. Menu → Quit exits cleanly.
 5. Confirm `~/Library/Application Support/NewsTicker/config.json` exists.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add Sources/NewsTicker/main.swift
@@ -1299,7 +1307,7 @@ git commit -m "feat: menu bar app wiring with poll timer and demo mode"
 - Consumes: everything; documents the finished app.
 - Produces: user-facing docs.
 
-- [ ] **Step 1: Write README.md**
+- [x] **Step 1: Write README.md**
 
 ```markdown
 # NewsTicker
@@ -1345,7 +1353,7 @@ Any Atlassian Statuspage-powered page works — add
     swift test
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add README.md
@@ -1369,7 +1377,7 @@ git commit -m "docs: README with run and config instructions"
   - `NEWSTICKER_CONFIG=<path>` env var: overrides the config file location; `history.json` then lives next to that config file, so mock runs never pollute the real outage history. No env var → behavior unchanged.
   - Note: no ATS/Info.plist work needed — App Transport Security exempts loopback (`http://127.0.0.1`) connections.
 
-- [ ] **Step 1: Write the mock server**
+- [x] **Step 1: Write the mock server**
 
 Create `scripts/mock-status-server.py`:
 ```python
@@ -1447,12 +1455,12 @@ if __name__ == "__main__":
         server.serve_forever()
 ```
 
-- [ ] **Step 2: Run the self-test**
+- [x] **Step 2: Run the self-test**
 
 Run: `python3 scripts/mock-status-server.py --self-test`
 Expected: prints `self-test OK`, exit code 0.
 
-- [ ] **Step 3: Write the mock config**
+- [x] **Step 3: Write the mock config**
 
 Create `scripts/mock-config.json`:
 ```json
@@ -1471,7 +1479,7 @@ Create `scripts/mock-config.json`:
 }
 ```
 
-- [ ] **Step 4: Add the NEWSTICKER_CONFIG override to main.swift**
+- [x] **Step 4: Add the NEWSTICKER_CONFIG override to main.swift**
 
 In `Sources/NewsTicker/main.swift`, replace:
 ```swift
@@ -1493,7 +1501,7 @@ with:
     }
 ```
 
-- [ ] **Step 5: Ignore mock-run history and verify build**
+- [x] **Step 5: Ignore mock-run history and verify build**
 
 ```bash
 printf 'scripts/history.json\n' >> .gitignore
@@ -1501,7 +1509,7 @@ swift build && swift test
 ```
 Expected: build succeeds, all tests still PASS (no TickerCore changes).
 
-- [ ] **Step 6: Verify end to end**
+- [x] **Step 6: Verify end to end**
 
 Terminal 1: `python3 scripts/mock-status-server.py --up 20 --down 20`
 Terminal 2:
@@ -1516,7 +1524,7 @@ Expected:
 4. `~/Library/Application Support/NewsTicker/history.json` is untouched.
 5. Delete `scripts/history.json` when done to reset mock escalation.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scripts/mock-status-server.py scripts/mock-config.json Sources/NewsTicker/main.swift .gitignore
