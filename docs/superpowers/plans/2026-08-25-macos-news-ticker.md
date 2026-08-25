@@ -34,11 +34,23 @@ harness before Xcode landed; that harness has been removed.)
     swift test    # 28 tests, 0 failures
     swift run     # the app
 
-**Manual verification was done without a screen.** `screencapture` returns
-"could not create image from display" because the terminal lacks Screen Recording
-permission, so Tasks 8 and 9 are verified by `NEWSTICKER_SELFTEST=1 swift run`,
-which prints window geometry, menu item enabled-state and config paths, then exits.
-A human should still eyeball the scrolling bar once.
+**Manual verification is complete, including visually.** Tasks 8 and 9 were first
+verified headlessly via `NEWSTICKER_SELFTEST=1 swift run` (prints window geometry, menu
+item enabled-state and config paths, then exits) because the terminal initially lacked
+Screen Recording permission. Once granted, the ticker was captured with `screencapture`
+and confirmed: red bar at both edges, white bold text scrolling right-to-left, the
+`  •  ` separator joining two simultaneous site outages, and tone/edge changes taking
+effect from a config override.
+
+A 150s end-to-end run against the mock server exercised the whole spec:
+
+    [17:04:38] BREAKING: MockHouse is down. Somewhere, an on-call phone is ruining a perfectly good lunch. — Mock Major Outage  •  BREAKING: MockHub has stopped MockHub-ing. Status page says: Mock Major Outage
+    [17:05:08] RESOLVED: MockHouse lives again. Panic-refreshing may now cease.
+    [17:05:23] BREAKING: MockHub is down AGAIN. At this point we should just leave this banner up. — Mock Major Outage
+
+showing fresh-tier messages escalating to repeat-offender, resolved messages appearing
+for exactly one poll then vanishing, two sites joined, and history landing in
+`scripts/history.json` while `~/Library/Application Support/NewsTicker/` stayed untouched.
 
 **Two defects found and fixed during execution, beyond what the plan specified:**
 
@@ -49,6 +61,15 @@ A human should still eyeball the scrolling bar once.
    the text is unchanged, so the marquee restarted from off-screen every poll interval —
    the message would never finish scrolling on a long outage. `pollOnce` now only acts
    when the text changes, and `reload()` clears that cache.
+3. `print()` block-buffers when stdout is redirected to a file, so the ticker log was
+   lost entirely whenever the app was killed rather than quit. `main.swift` now calls
+   `setvbuf(stdout, nil, _IOLBF, 0)`.
+
+**One tuning change beyond the plan:** `scripts/mock-config.json` polled every 5s while
+the mock cycled every 8s, which replaced each message long before it could be read — one
+full scroll pass takes `(screenWidth + textWidth) / scrollPointsPerSecond` seconds, ~22s
+at the default 120 pt/s. The mock config now polls every 15s at 200 pt/s, and the mock
+server docstring warns to keep `--down` above one pass.
 
 **Pre-flight fix already applied:** Task 9 originally set `AppDelegate` as the target for
 every menu item including Quit, whose action is `NSApplication.terminate(_:)`. AppDelegate
