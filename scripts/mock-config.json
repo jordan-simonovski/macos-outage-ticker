@@ -1,0 +1,19 @@
+{
+  "sites": [
+    {
+      "name": "MockHub",
+      "url": "http://127.0.0.1:8787/mockhub"
+    },
+    {
+      "name": "MockHouse",
+      "url": "http://127.0.0.1:8787/mockhouse"
+    }
+  ],
+  "pollIntervalSeconds": 15,
+  "tone": "snarky",
+  "edge": "bottom",
+  "historyWindowDays": 30,
+  "repeatOffenderThreshold": 2,
+  "notNewsThreshold": 5,
+  "scrollPointsPerSecond": 200
+}
