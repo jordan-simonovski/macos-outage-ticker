@@ -1,19 +1,26 @@
-import Foundation
-import TickerCore
+import XCTest
+@testable import TickerCore
 
-func runStatusPageTests() {
-    let healthy = #"{"page":{"id":"kctbh9vrtdwd","name":"GitHub","url":"https://www.githubstatus.com","updated_at":"2026-08-25T00:00:00Z"},"status":{"indicator":"none","description":"All Systems Operational"}}"#
-    if let status = try? StatusPage.parse(Data(healthy.utf8)) {
-        Check.equal(status, ServiceStatus(indicator: .none, description: "All Systems Operational"))
-    } else {
-        Check.isTrue(false, "healthy payload failed to parse")
+final class StatusPageTests: XCTestCase {
+    func testParsesHealthyPayload() throws {
+        let json = #"{"page":{"id":"kctbh9vrtdwd","name":"GitHub","url":"https://www.githubstatus.com","updated_at":"2026-08-25T00:00:00Z"},"status":{"indicator":"none","description":"All Systems Operational"}}"#
+        let status = try StatusPage.parse(Data(json.utf8))
+        XCTAssertEqual(status, ServiceStatus(indicator: .none, description: "All Systems Operational"))
     }
 
-    let outage = #"{"status":{"indicator":"major","description":"Partial System Outage"}}"#
-    Check.equal(try? StatusPage.parse(Data(outage.utf8)).indicator, .major)
+    func testParsesOutagePayload() throws {
+        let json = #"{"status":{"indicator":"major","description":"Partial System Outage"}}"#
+        let status = try StatusPage.parse(Data(json.utf8))
+        XCTAssertEqual(status.indicator, .major)
+    }
 
-    let weird = #"{"status":{"indicator":"weird_new_value","description":"?"}}"#
-    Check.equal(try? StatusPage.parse(Data(weird.utf8)).indicator, .unknown)
+    func testUnknownIndicatorDecodesAsUnknown() throws {
+        let json = #"{"status":{"indicator":"weird_new_value","description":"?"}}"#
+        let status = try StatusPage.parse(Data(json.utf8))
+        XCTAssertEqual(status.indicator, .unknown)
+    }
 
-    Check.throwsError { _ = try StatusPage.parse(Data("<html>".utf8)) }
+    func testGarbageDataThrows() {
+        XCTAssertThrowsError(try StatusPage.parse(Data("<html>".utf8)))
+    }
 }

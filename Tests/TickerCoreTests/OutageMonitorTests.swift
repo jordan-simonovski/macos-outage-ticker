@@ -1,35 +1,43 @@
-import Foundation
-import TickerCore
+import XCTest
+@testable import TickerCore
 
-func runOutageMonitorTests() {
-    // Up then down is a beginning
-    let a = OutageMonitor()
-    Check.equal(a.observe(site: "GitHub", indicator: .none), .none)
-    Check.equal(a.observe(site: "GitHub", indicator: .major), .began)
+final class OutageMonitorTests: XCTestCase {
+    func testUpToDownIsBegan() {
+        let m = OutageMonitor()
+        XCTAssertEqual(m.observe(site: "GitHub", indicator: .none), .none)
+        XCTAssertEqual(m.observe(site: "GitHub", indicator: .major), .began)
+    }
 
-    // App launched mid-outage: still fire the ticker
-    Check.equal(OutageMonitor().observe(site: "GitHub", indicator: .critical), .began)
+    func testFirstObservationDownIsBegan() {
+        // App launched mid-outage: still fire the ticker.
+        let m = OutageMonitor()
+        XCTAssertEqual(m.observe(site: "GitHub", indicator: .critical), .began)
+    }
 
-    // Down stays down is not a new event
-    let b = OutageMonitor()
-    _ = b.observe(site: "GitHub", indicator: .major)
-    Check.equal(b.observe(site: "GitHub", indicator: .minor), .none)
+    func testDownStaysDownIsNone() {
+        let m = OutageMonitor()
+        _ = m.observe(site: "GitHub", indicator: .major)
+        XCTAssertEqual(m.observe(site: "GitHub", indicator: .minor), .none)
+    }
 
-    // Down then up is an ending
-    let c = OutageMonitor()
-    _ = c.observe(site: "GitHub", indicator: .major)
-    Check.equal(c.observe(site: "GitHub", indicator: .none), .ended)
+    func testDownToUpIsEnded() {
+        let m = OutageMonitor()
+        _ = m.observe(site: "GitHub", indicator: .major)
+        XCTAssertEqual(m.observe(site: "GitHub", indicator: .none), .ended)
+    }
 
-    // Sites are tracked independently
-    let d = OutageMonitor()
-    _ = d.observe(site: "GitHub", indicator: .major)
-    Check.equal(d.observe(site: "Claude", indicator: .minor), .began)
+    func testSitesAreIndependent() {
+        let m = OutageMonitor()
+        _ = m.observe(site: "GitHub", indicator: .major)
+        XCTAssertEqual(m.observe(site: "Claude", indicator: .minor), .began)
+    }
 
-    // Only minor/major/critical count as outages
-    Check.isFalse(OutageMonitor.isOutage(.maintenance))
-    Check.isFalse(OutageMonitor.isOutage(.unknown))
-    Check.isFalse(OutageMonitor.isOutage(.none))
-    Check.isTrue(OutageMonitor.isOutage(.minor))
-    Check.isTrue(OutageMonitor.isOutage(.major))
-    Check.isTrue(OutageMonitor.isOutage(.critical))
+    func testMaintenanceAndUnknownAreNotOutages() {
+        XCTAssertFalse(OutageMonitor.isOutage(.maintenance))
+        XCTAssertFalse(OutageMonitor.isOutage(.unknown))
+        XCTAssertFalse(OutageMonitor.isOutage(.none))
+        XCTAssertTrue(OutageMonitor.isOutage(.minor))
+        XCTAssertTrue(OutageMonitor.isOutage(.major))
+        XCTAssertTrue(OutageMonitor.isOutage(.critical))
+    }
 }

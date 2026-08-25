@@ -25,19 +25,14 @@
 
 **All 11 tasks are implemented and committed on `build/news-ticker`.**
 
-**The XCTest blocker was resolved by taking this plan's own documented fallback**, not by
-installing Xcode. `Tests/TickerCoreTests` is now an `.executableTarget` running a
-dependency-free assert harness (`Tests/TickerCoreTests/Harness.swift`).
+**The XCTest blocker is gone** — Xcode 26.6 was installed partway through execution.
+`Tests/TickerCoreTests` is a normal `.testTarget` and `swift test` runs 28 XCTest cases,
+all passing. (Tasks 2-7 were driven red-green against a temporary dependency-free assert
+harness before Xcode landed; that harness has been removed.)
 
-    swift build                 # builds
-    swift run TickerCoreTests   # 78 checks, all passing
-    swift run                   # the app
-
-To move back to XCTest once Xcode is installed: change the `TickerCoreTests`
-`.executableTarget` in `Package.swift` back to a `.testTarget`, delete
-`Harness.swift` and `Tests/TickerCoreTests/main.swift`, and rewrite each
-`runXTests()` function as an `XCTestCase`. Every API under test is `public`,
-so no `@testable` is needed either way.
+    swift build
+    swift test    # 28 tests, 0 failures
+    swift run     # the app
 
 **Manual verification was done without a screen.** `screencapture` returns
 "could not create image from display" because the terminal lacks Screen Recording

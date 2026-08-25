@@ -38,12 +38,10 @@ Any Atlassian Statuspage-powered page works — add
 
 ## Test
 
-    swift run TickerCoreTests
+    swift test
 
-`TickerCore` is covered by a dependency-free assert harness rather than XCTest,
-because Command Line Tools ships no XCTest module. On a machine with Xcode
-installed, swap the `TickerCoreTests` executable target in `Package.swift` back
-to a `.testTarget` and run `swift test`.
+28 XCTest cases covering `TickerCore`. Requires Xcode — Command Line Tools alone
+ships no XCTest module.
 
 The AppKit layer has no unit tests. Its equivalent is:
 
