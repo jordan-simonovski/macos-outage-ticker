@@ -2,5 +2,6 @@
 runConfigTests()
 runStatusPageTests()
 runOutageMonitorTests()
+runOutageHistoryTests()
 
 Check.report()
