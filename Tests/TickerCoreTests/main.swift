@@ -4,5 +4,6 @@ runStatusPageTests()
 runOutageMonitorTests()
 runOutageHistoryTests()
 runMessageComposerTests()
+await runPollEngineTests()
 
 Check.report()
