@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let appSupport = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("NewsTicker")
+        .appendingPathComponent("ONN")
     // NEWSTICKER_CONFIG points at an alternate config for local testing;
     // history then lives beside it so mock outages never pollute real history.
     private var configURL: URL {
@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        migrateLegacySupportDirectory()
         if !FileManager.default.fileExists(atPath: configURL.path) {
             try? Config.default.save(to: configURL)  // seed an editable config on first run
         }
@@ -42,9 +43,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if env["NEWSTICKER_SELFTEST"] == "1" { runSelfTest() }
     }
 
+    // The app was called NewsTicker before it was ONN. Carry the old config and
+    // outage history across rather than silently starting from scratch.
+    private func migrateLegacySupportDirectory() {
+        let fm = FileManager.default
+        let legacy = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("NewsTicker")
+        guard fm.fileExists(atPath: legacy.path),
+              !fm.fileExists(atPath: appSupport.path) else { return }
+        try? fm.moveItem(at: legacy, to: appSupport)
+    }
+
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "📰"
+        // SF Symbol rather than an emoji: it is a template image, so it tracks the
+        // menu bar's light/dark appearance and matches the system icons beside it.
+        if let icon = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right",
+                              accessibilityDescription: "ONN — Outage News Network") {
+            icon.isTemplate = true
+            statusItem.button?.image = icon
+        } else {
+            statusItem.button?.title = "ONN"
+        }
         let menu = NSMenu()
         for (title, action, key) in [
             ("Test Ticker", #selector(testTicker), "t"),
@@ -117,7 +137,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func runSelfTest() {
         let menu = statusItem.menu!
         menu.update()  // force auto-enabling validation, the thing that greys Quit out
-        print("statusItem title=\(statusItem.button?.title ?? "nil")")
+        let icon = statusItem.button?.image
+        print("statusItem image=\(icon != nil) template=\(icon?.isTemplate ?? false) "
+              + "size=\(icon.map { "\(Int($0.size.width))x\(Int($0.size.height))" } ?? "-") "
+              + "fallbackTitle=\"\(statusItem.button?.title ?? "")\"")
         print("activationPolicy=\(NSApp.activationPolicy() == .accessory ? "accessory" : "OTHER")")
         for item in menu.items where !item.isSeparatorItem {
             print("menu \"\(item.title)\" enabled=\(item.isEnabled) target=\(item.target == nil ? "responderChain" : "delegate")")

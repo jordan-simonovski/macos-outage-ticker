@@ -65,6 +65,15 @@ for exactly one poll then vanishing, two sites joined, and history landing in
    lost entirely whenever the app was killed rather than quit. `main.swift` now calls
    `setvbuf(stdout, nil, _IOLBF, 0)`.
 
+**Rebranded to ONN (Outage News Network) after the plan was written.** This supersedes
+one Global Constraint: the fixed copy rule wrapping ticker text as `"  +++ <message> +++  "`.
+The bar now carries a fixed ONN badge at the left edge and a live clock at the right, which
+is what the `+++` filler was standing in for, so the wrapper was dropped. The `"  •  "`
+separator between simultaneous outages is unchanged. User-facing names are ONN
+(`ONN.app`, `~/Library/Application Support/ONN/`); the SPM targets are still
+`NewsTicker`/`TickerCore`, which no user ever sees. An existing `NewsTicker` support
+directory is migrated on launch so outage history is not orphaned.
+
 **One tuning change beyond the plan:** `scripts/mock-config.json` polled every 5s while
 the mock cycled every 8s, which replaced each message long before it could be read — one
 full scroll pass takes `(screenWidth + textWidth) / scrollPointsPerSecond` seconds, ~22s

@@ -27,15 +27,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - name: Build universal .app
+      - name: Build ONN.app and ONN.dmg
         run: scripts/make-app.sh "$GITHUB_REF_NAME"
-      - name: Zip
+      - name: Zip the bundle
         # ditto, not zip: preserves bundle structure and the code signature.
-        run: ditto -c -k --keepParent dist/NewsTicker.app dist/NewsTicker.zip
+        run: ditto -c -k --keepParent dist/ONN.app dist/ONN.zip
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/NewsTicker.zip \
-            --title "$GITHUB_REF_NAME" \
+          gh release create "$GITHUB_REF_NAME" dist/ONN.dmg dist/ONN.zip \
+            --title "ONN $GITHUB_REF_NAME" \
             --notes-file .github/release-notes.md
