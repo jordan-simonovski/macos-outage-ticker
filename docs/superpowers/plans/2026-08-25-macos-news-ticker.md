@@ -21,6 +21,39 @@
 - Config is a user-editable JSON file at `~/Library/Application Support/NewsTicker/config.json`; outage history persists next to it. Menu items: Test Ticker, Open Config, Reload Config, Quit.
 - Purpose is novelty/comedy. Simplicity beats robustness everywhere except: never crash on bad network data, never lose the outage history file to a partial write.
 
+## Execution status (2026-08-25)
+
+Execution started on a machine without Xcode and stopped at Task 1. Resume on a machine
+with Xcode installed.
+
+**Done:** Task 1 (scaffold) is committed on branch `build/news-ticker`. `swift build` and
+`swift run` both work.
+
+**Blocked:** `swift test` fails with `error: no such module 'XCTest'`. Command Line Tools
+ships the Swift compiler but no test frameworks, and neither `import XCTest` nor
+`import Testing` resolves without Xcode. Every task here is TDD, so this blocks Tasks 2-11.
+
+**To resume:**
+
+1. Install Xcode, then `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`,
+   `sudo xcodebuild -license accept`, `xcodebuild -runFirstLaunch`.
+2. Verify with `swift build && swift test` (Task 1's placeholder test should pass).
+3. Re-run the Task 1 review, then continue from Task 2.
+
+**Pre-flight fix already applied:** Task 9 originally set `AppDelegate` as the target for
+every menu item including Quit, whose action is `NSApplication.terminate(_:)`. AppDelegate
+does not implement that selector, so AppKit's auto-enabling would have greyed Quit out and
+left the app unquittable from its own menu. Quit now keeps a nil target so the responder
+chain reaches NSApp.
+
+**Fallback if Xcode is not an option:** replace the XCTest test target with a
+dependency-free assert harness in an executable target
+(`.executableTarget(name: "TickerCoreTests", dependencies: ["TickerCore"], path: "Tests/TickerCoreTests")`,
+run with `swift run TickerCoreTests`). This was prototyped and verified working on Command
+Line Tools alone — top-level `await`, `#filePath`/`#line` failure reporting, and non-zero
+exit on failure all functioned. Every API under test is `public`, so the tests need a plain
+`import TickerCore` and no `@testable`.
+
 ## Global Constraints
 
 - macOS 13+ (`platforms: [.macOS(.v13)]`), Swift tools version 5.9.
