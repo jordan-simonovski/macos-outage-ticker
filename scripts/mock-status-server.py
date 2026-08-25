@@ -6,6 +6,11 @@ Each site cycles: up for --up seconds, down for --down seconds, computed from
 wall-clock time (stateless). The site name hashes to a phase offset so
 different sites go down at different times.
 
+Keep --down comfortably above one full scroll pass, which takes
+(screenWidth + textWidth) / scrollPointsPerSecond seconds — roughly 15s at the
+mock config's 200 pt/s on a 1728pt display. Cycling faster than that replaces
+the message before anyone can read it.
+
 Usage:
     python3 scripts/mock-status-server.py [--port 8787] [--up 45] [--down 30]
     python3 scripts/mock-status-server.py --self-test
