@@ -21,13 +21,17 @@ Hugops always.
 
 ## Install
 
-Download **`ONN.dmg`** from [the latest release](https://github.com/jordan-simonovski/macos-outage-ticker/releases/latest),
+    brew install --cask jordan-simonovski/tap/onn
+
+Or download **`ONN.dmg`** from [the latest release](https://github.com/jordan-simonovski/macos-outage-ticker/releases/latest),
 open it, and drag **ONN** to Applications.
 
-ONN is ad-hoc signed but **not notarized**, so macOS blocks it on first launch.
-Either right-click the app → Open → Open, or run:
+ONN is ad-hoc signed but **not notarized**, so a manual install gets blocked on
+first launch with "Apple could not verify ONN is free of malware". Clear it with:
 
     xattr -dr com.apple.quarantine /Applications/ONN.app
+
+(The cask does this for you, which is why the brew install just works.)
 
 Universal binary (Apple silicon + Intel), macOS 13+.
 
